@@ -5,7 +5,6 @@ extends CharacterBody3D
 
 @export_group("Player Movement")
 @export var speed: float = 5.0
-@export var acceleration: float = 20.0
 
 @onready var camera: Camera3D = %Camera3D
 
@@ -28,10 +27,10 @@ func _physics_process(delta: float) -> void:
 	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
 	if direction:
-		velocity.x = move_toward(velocity.x, direction.x * speed, acceleration * delta)
-		velocity.z = move_toward(velocity.z, direction.z * speed, acceleration * delta)
+		velocity.x = move_toward(velocity.x, direction.x * speed, delta)
+		velocity.z = move_toward(velocity.z, direction.z * speed, delta)
 	else:
-		velocity.x = move_toward(velocity.x, 0, acceleration * delta)
-		velocity.z = move_toward(velocity.z, 0, acceleration * delta)
+		velocity.x = move_toward(velocity.x, 0, * delta)
+		velocity.z = move_toward(velocity.z, 0, * delta)
 		
 	move_and_slide()
