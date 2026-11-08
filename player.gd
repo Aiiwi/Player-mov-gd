@@ -1,55 +1,37 @@
 extends CharacterBody3D
 
-@export_group("Camera")
- #mouse sens
+@export_group("Camera Settings")
+@export var mouse_sensitivity: float = 0.002 
 
-@export_group("Player_Movement")
-@export var move_speed :float = 5.0 
-@export var acceleration :float = 20.0 
+@export_group("Player Movement")
+@export var speed: float = 5.0
+@export var acceleration: float = 20.0
 
-@onready var pause_ui:CanvasLayer = $CameraPoint/UI/Pause_UI
-@onready var _camera:Camera3D = %CameraPoint
-@onready var headbob:AnimationPlayer = $CameraPoint/headbob
+@onready var camera: Camera3D = %Camera3D
 
-var _camera_input_direction = Vector2.ZERO
+var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 func _ready() -> void:
-	pause_ui.visible = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
-func _input(event: InputEvent):
-	
-	if event.is_action_pressed("UI_PAUSE"): #handled pause input with hotkey
-		pause_ui.visible = true
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	
 func _unhandled_input(event: InputEvent) -> void:
-	var is_camera_mov = (
-		event is InputEventMouseMotion and
-		Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED
-	)
-	
-	if is_camera_mov:
-		_camera_input_direction = event.screen_relative * GLOBAL.mouse_sensitivity
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		rotate_y(-event.relative.x * mouse_sensitivity)
+		camera.rotate_x(-event.relative.y * mouse_sensitivity)
+		camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-80), deg_to_rad(80))
 
 func _physics_process(delta: float) -> void:
-	_camera.rotation.x += -_camera_input_direction.y * delta
-	_camera.rotation.x = clamp(_camera.rotation.x, deg_to_rad(-80),deg_to_rad(80)) 
-	_camera.rotation.y -= _camera_input_direction.x * delta
-	
-	_camera_input_direction = Vector2.ZERO
-	
-	var raw_input := Input.get_vector("MOVE_LEFT","MOVE_RIGHT","MOVE_FORWARD","MOVE_BACK") #hotkeys wasd
-	
-	if raw_input && is_on_floor():
-		headbob.play("head_bobbing")#using a animation player includes even step sounds lazy solution
+	if not is_on_floor():
+		velocity.y -= gravity * delta
+
+	var input_dir := Input.get_vector("MOV_LEFT", "MOV_RIGHT", "MOV_UP", "MOV_DOWN")
+	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+
+	if direction:
+		velocity.x = move_toward(velocity.x, direction.x * speed, acceleration * delta)
+		velocity.z = move_toward(velocity.z, direction.z * speed, acceleration * delta)
 	else:
-		headbob.pause()
-	
-	var move_dir = _camera.global_basis.z * raw_input.y + (-_camera.global_basis.x) * raw_input.x
-	move_dir.y=0.0
-	move_dir = move_dir.normalized()
-	
-	velocity = velocity.move_toward(move_dir* move_speed, acceleration * delta)
-	
+		velocity.x = move_toward(velocity.x, 0, acceleration * delta)
+		velocity.z = move_toward(velocity.z, 0, acceleration * delta)
+		
 	move_and_slide()
